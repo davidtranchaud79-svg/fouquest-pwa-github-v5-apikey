@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fouques’t Suite v9.1 • Pro (clé requise)</title>
+  <meta name="theme-color" content="#5A0D0D">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root { --bordeaux:#5A0D0D; --or:#C9A227; --ivoire:#FFF8E7; }
+    .brand-gradient { background: linear-gradient(135deg, var(--bordeaux), #7f1d1d); }
+    .card { border-radius: 1rem; box-shadow: 0 10px 24px rgba(0,0,0,.08); background: white; }
+    .chip { padding:.25rem .6rem; border-radius:999px; font-size:.75rem; background:#EEE; }
+    .container { max-width: 1160px; margin: 0 auto; }
+  </style>
+</head>
+<body class="bg-[var(--ivoire)] text-neutral-800 min-h-screen" x-data="appState()" x-init="init()">
+  <div x-show="toast.show" x-transition class="fixed top-4 inset-x-0 flex justify-center pointer-events-none z-[60]">
+    <div class="pointer-events-auto px-4 py-2 rounded-xl bg-black/85 text-white text-sm">
+      <span x-text="toast.msg"></span>
+    </div>
+  </div>
+
+  <header class="brand-gradient text-white p-4">
+    <div class="container flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <img src="icons/icon-192.png" class="w-10 h-10 rounded-xl ring-2 ring-[var(--or)]" alt="Logo" />
+        <div>
+          <h1 class="text-xl font-semibold leading-none">Fouques’t Suite • Pro</h1>
+          <p class="text-xs opacity-85">Clé API requise pour accéder aux données</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="chip bg-white/20">🇫🇷 FR</span>
+        <button class="px-3 py-1 bg-[var(--or)]/90 text-black rounded-lg text-sm" @click="installPWA" x-show="deferredPrompt">Installer</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="bg-white/80 border-b">
+    <div class="container px-3 py-2 text-sm flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+      <div class="flex items-center gap-2">
+        <div class="chip">Connecté : <strong x-text="whoami.email || '—'"></strong></div>
+        <div class="chip">Rôle : <strong x-text="whoami.role || '-'"></strong></div>
+      </div>
+      <div class="flex items-center gap-2">
+        <input class="border rounded-lg px-2 py-1 w-72" placeholder="Apps Script URL (…/exec)" x-model="config.apiBaseUrl" />
+        <input class="border rounded-lg px-2 py-1 w-56" placeholder="API Key (obligatoire)" x-model="config.apiKey" />
+        <button class="px-2 py-1 bg-neutral-200 rounded-lg" @click="saveConfig">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <nav class="sticky top-0 bg-[var(--ivoire)]/95 border-b border-neutral-200 backdrop-blur z-40">
+    <div class="container px-3 py-2 grid grid-cols-6 gap-2 text-sm">
+      <button :class="tab==='home' ? 'bg-white' : 'bg-white/60 hover:bg-white'" class="card px-3 py-2" @click="tab='home'">🏠 Accueil</button>
+      <button :class="tab==='pertes' ? 'bg-white' : 'bg-white/60 hover:bg-white'" class="card px-3 py-2" @click="tab='pertes'">🗑️ Pertes</button>
+      <button :class="tab==='journalier' ? 'bg-white' : 'bg-white/60 hover:bg-white'" class="card px-3 py-2" @click="tab='journalier'">📦 Journalier</button>
+      <button :class="tab==='mensuel' ? 'bg-white' : 'bg-white/60 hover:bg-white'" class="card px-3 py-2" @click="tab='mensuel'">🗂️ Mensuel</button>
+      <button :class="tab==='recettes' ? 'bg-white' : 'bg-white/60 hover:bg-white'" class="card px-3 py-2" @click="tab='recettes'">📖 Recettes</button>
+      <button :class="tab==='rapports' ? 'bg-white' : 'bg-white/60 hover:bg-white'" class="card px-3 py-2" @click="tab='rapports'">📊 Rapports</button>
+    </div>
+  </nav>
+
+  <main class="container p-4 grid gap-4">
+    <section x-show="tab==='home'" class="grid md:grid-cols-2 gap-4">
+      <div class="card p-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-semibold">Tableau de bord</h2>
+          <button class="text-sm underline" @click="refreshAll">Recharger</button>
+        </div>
+        <div class="mt-3 grid grid-cols-2 gap-3">
+          <div class="p-3 rounded-xl bg-[var(--bordeaux)] text-white">
+            <div class="text-sm opacity-80">Pertes 7 jours</div>
+            <div class="text-2xl font-bold" x-text="kpi.pertes7j.toFixed(1) + ' kg'"></div>
+          </div>
+          <div class="p-3 rounded-xl bg-[var(--or)] text-black">
+            <div class="text-sm opacity-80">Valeur stock</div>
+            <div class="text-2xl font-bold" x-text="formatCurrency(kpi.valeurStock)"></div>
+          </div>
+          <div class="p-3 rounded-xl bg-white border">
+            <div class="text-sm opacity-60">Top produit perdu</div>
+            <div class="text-lg font-semibold" x-text="kpi.topPerdu"></div>
+          </div>
+          <div class="p-3 rounded-xl bg-white border">
+            <div class="text-sm opacity-60">Zones validées (mensuel)</div>
+            <div class="text-lg font-semibold" x-text="kpi.progressMensuel + '%'"></div>
+          </div>
+        </div>
+      </div>
+      <div class="card p-4">
+        <h2 class="text-lg font-semibold mb-2">Pertes (7 jours)</h2>
+        <div style="height:260px"><canvas id="chartPertes" height="260"></canvas></div>
+      </div>
+    </section>
+
+    <section x-show="tab==='pertes'" class="card p-4">
+      <h2 class="text-lg font-semibold">Déclarer une perte</h2>
+      <form class="grid md:grid-cols-8 gap-3 mt-3" @submit.prevent="submitPerte">
+        <input class="border rounded-lg px-3 py-2 col-span-2" placeholder="Produit" x-model="perte.produit" required />
+        <input class="border rounded-lg px-3 py-2 col-span-1" placeholder="Quantité" type="number" step="0.001" min="0" x-model.number="perte.qte" required />
+        <select class="border rounded-lg px-3 py-2 col-span-1" x-model="perte.unite" required>
+          <option value="" disabled>Unité</option>
+          <option value="kg">kg</option>
+          <option value="pcs">pcs</option>
+          <option value="l">l</option>
+        </select>
+        <select class="border rounded-lg px-3 py-2 col-span-2" x-model="perte.motif" required>
+          <option value="" disabled>Motif</option>
+          <option>DLC dépassée</option>
+          <option>Surcuisson</option>
+          <option>Casse</option>
+          <option>Surproduction</option>
+          <option>Autre</option>
+        </select>
+        <input class="border rounded-lg px-3 py-2 col-span-1" placeholder="Zone/Poste" x-model="perte.zone" />
+        <button class="bg-[var(--bordeaux)] text-white rounded-lg px-3 py-2 col-span-8 md:col-span-1">Enregistrer</button>
+      </form>
+      <p class="text-sm text-neutral-500 mt-2" x-text="perteStatus"></p>
+    </section>
+
+    <section x-show="tab==='journalier'" class="card p-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg font-semibold">Mouvements prédéfinis</h2>
+        <div class="text-xs opacity-70">Depuis la feuille <code>Templates_Journalier</code></div>
+      </div>
+      <div class="grid md:grid-cols-4 gap-3 mt-3">
+        <select class="border rounded-lg px-3 py-2 md:col-span-2" x-model="journalier.selection">
+          <option value="">— Sélectionner un template —</option>
+          <template x-for="t in templates" :key="t.code">
+            <option :value="t.code" x-text="t.label"></option>
+          </template>
+        </select>
+        <input class="border rounded-lg px-3 py-2" placeholder="Quantité" type="number" step="0.001" min="0" x-model.number="journalier.qte" />
+        <button class="bg-[var(--or)] text-black rounded-lg px-3 py-2" @click="submitMouvement">Valider le mouvement</button>
+      </div>
+      <p class="text-sm text-neutral-500 mt-2" x-text="journalierStatus"></p>
+    </section>
+
+    <section x-show="tab==='mensuel'" class="card p-4">
+      <h2 class="text-lg font-semibold">Inventaire mensuel</h2>
+      <div class="grid md:grid-cols-3 gap-3 mt-3">
+        <select class="border rounded-lg px-3 py-2" x-model="mensuel.zone">
+          <option value="">— Choisir une zone —</option>
+          <template x-for="z in zones" :key="z">
+            <option :value="z" x-text="z"></option>
+          </template>
+        </select>
+        <select class="border rounded-lg px-3 py-2" x-model="mensuel.action">
+          <option value="brouillon">Brouillon</option>
+          <option value="valider">Validation</option>
+          <option value="cloturer">Clôture</option>
+        </select>
+        <button class="bg-[var(--bordeaux)] text-white rounded-lg px-3 py-2" @click="doMensuelAction">Appliquer</button>
+      </div>
+      <p class="text-sm text-neutral-500 mt-2" x-text="mensuelStatus"></p>
+      <div class="mt-3">
+        <div class="h-2 bg-neutral-200 rounded-full overflow-hidden">
+          <div class="h-full bg-[var(--or)]" :style="`width: ${kpi.progressMensuel}%`"></div>
+        </div>
+        <div class="text-xs mt-1 opacity-70">Progression globale : <span x-text="kpi.progressMensuel + '%'"></span></div>
+      </div>
+    </section>
+
+    <section x-show="tab==='recettes'" class="card p-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg font-semibold">Recettes</h2>
+        <div class="text-sm opacity-70">Source : <code>Recettes_Index</code></div>
+      </div>
+      <div class="mt-4 grid gap-3">
+        <div class="grid md:grid-cols-3 gap-3">
+          <input class="border rounded-lg px-3 py-2" placeholder="Recherche (nom, catégorie, allergènes)" x-model.debounce.500ms="recettes.query" />
+          <input class="border rounded-lg px-3 py-2" type="number" step="0.1" min="0.1" x-model.number="recettes.mult" placeholder="Multiplicateur (ex: 2)" />
+          <button class="bg-[var(--or)] text-black rounded-lg px-3 py-2" @click="loadRecettes">Recharger</button>
+        </div>
+        <template x-for="r in filteredRecettes()" :key="r.id">
+          <div class="border rounded-xl p-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="font-semibold" x-text="r.nom"></div>
+                <div class="text-xs opacity-70" x-text="'Portions: ' + Math.round(r.portionsBase * recettes.mult * 10)/10 + ' • Cat: ' + (r.categorie||'-') + ' • Allergènes: ' + (r.allergenes||'-')"></div>
+              </div>
+              <button class="px-3 py-1 bg-[var(--bordeaux)] text-white rounded-lg text-sm" @click="produire(r)">Produire</button>
+            </div>
+            <div class="mt-2 text-sm">
+              <template x-for="ing in scaleIngredients(r.ingredients)" :key="ing.nom + ing.unite">
+                <div class="grid grid-cols-6 gap-2 items-center">
+                  <div class="col-span-3" x-text="ing.nom"></div>
+                  <div class="col-span-1 text-right" x-text="ing.qte"></div>
+                  <div class="col-span-1" x-text="ing.unite"></div>
+                  <div class="col-span-1 text-right" x-text="formatCurrency(ing.prix || 0)"></div>
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
+      </div>
+      <p class="text-sm text-neutral-500 mt-2" x-text="recettesStatus"></p>
+    </section>
+
+    <section x-show="tab==='rapports'" class="card p-4">
+      <h2 class="text-lg font-semibold">Rapports & exports</h2>
+      <div class="grid md:grid-cols-4 gap-3 mt-3">
+        <input class="border rounded-lg px-3 py-2 md:col-span-2" placeholder="Période (AAAA-MM)" x-model="rapports.periode" />
+        <select class="border rounded-lg px-3 py-2" x-model="rapports.type">
+          <option value="pdf_mensuel">PDF mensuel</option>
+          <option value="excel_complet">Excel complet</option>
+        </select>
+        <button class="bg-[var(--or)] text-black rounded-lg px-3 py-2" @click="genererRapport">Générer</button>
+      </div>
+      <div class="mt-2 text-sm text-neutral-500" x-text="rapportsStatus"></div>
+      <template x-if="rapportUrl">
+        <a :href="rapportUrl" target="_blank" class="inline-block mt-2 underline text-[var(--bordeaux)]">Ouvrir le rapport</a>
+      </template>
+    </section>
+  </main>
+
+  <footer class="py-10 text-center text-xs opacity-70">
+    Fouques’t Suite v9.1 — PWA • Clé API requise
+  </footer>
+
+  <script src="app.js?v=5"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js'); });
+    }
+  </script>
+</body>
+</html>
