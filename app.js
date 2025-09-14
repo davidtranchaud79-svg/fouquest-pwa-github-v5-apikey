@@ -1,6 +1,6 @@
 /* Fouques’t Suite — app.js v5 (API key required; key passed via query param) */
 const DEFAULT_CONFIG = {
-  apiBaseUrl: 'https://script.google.com/macros/s/AKfycbx_aTmsQpsA5bf94EiZyGHjsn36M5lYl0Ig1QtxxJVbuT_UnTQWTmWQZeojRB7jB3q1/exec',
+  apiBaseUrl: 'https://script.google.com/macros/s/AKfycbwPMFw8NYOwz0zZ1C87RG_jy13XNq4Z3k_WwHFNAR9HIA3vtUcdqNDRKThmB10MIIKnKw/exec,
   apiKey: localStorage.getItem('fs_key') || '',
 };
 function appState(){
